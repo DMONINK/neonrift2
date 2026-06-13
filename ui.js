@@ -1,5 +1,5 @@
 /* =====================================================
-   NEON RIFT: SKY RUNNER — ui.js  v2.2
+   NEON RIFT: SKY RUNNER — ui.js  v2.5
    Screen transitions, shop rendering, HUD, popups,
    boss HP bar, level indicator, achievement toasts
    ===================================================== */
@@ -54,6 +54,18 @@ const UI = (() => {
     safe('title-currency',   d.currency.toLocaleString());
     safe('title-total-runs', d.totalRuns || 0);
     safe('title-highest-level', 'LV ' + (d.highestLevel || 1));
+
+    // Show / hide the CONTINUE button based on saved death checkpoint
+    const continueBtn = el('btn-continue');
+    if (continueBtn) {
+      const ds = Storage.getDeathState();
+      if (ds.level > 0) {
+        continueBtn.style.display = '';
+        continueBtn.textContent = `▶ CONTINUE — LV ${ds.level}`;
+      } else {
+        continueBtn.style.display = 'none';
+      }
+    }
   }
 
   // ---- Buttons ----
@@ -63,7 +75,8 @@ const UI = (() => {
       if (e) e.addEventListener('click', () => { Audio.init(); Audio.resume(); fn(); });
     };
 
-    on('btn-play',              () => { showScreen('screen-game'); Game.start(); });
+    on('btn-play',              () => { showScreen('screen-game'); Game.startFresh(); });
+    on('btn-continue',          () => { showScreen('screen-game'); Game.startSaved(); });
     on('btn-upgrade',           () => showScreen('screen-upgrade'));
     on('btn-instructions',      () => showScreen('screen-instructions'));
     on('btn-instructions-back', () => showScreen('screen-title'));
@@ -179,7 +192,7 @@ const UI = (() => {
 
   // Powerup duration map for the fill bar
   const POWERUP_DEFS_MAP = {
-    magnet:10, slowmo:6, dashBoost:8, invincible:5, doubleScore:12, rapidFire:6
+    magnet:10, dashBoost:8, invincible:5, doubleScore:12, rapidFire:6
   };
 
   function updatePauseStats({ score, combo, level }) {

@@ -1,5 +1,5 @@
 /* =====================================================
-   NEON RIFT: SKY RUNNER — storage.js  v2.2
+   NEON RIFT: SKY RUNNER — storage.js  v2.5
    Handles all localStorage persistence
    ===================================================== */
 
@@ -37,6 +37,9 @@ const Storage = (() => {
     muted:  false,
     // Run history (last 10 scores)
     runHistory: [],
+    // Death checkpoint for Continue
+    savedDeathLevel: 0,
+    savedDifficultyTimer: 0,
   };
 
   let _data = null;
@@ -154,6 +157,28 @@ const Storage = (() => {
     return _data;
   }
 
+  function saveDeathState(level, diffTimer) {
+    if (!_data) load();
+    _data.savedDeathLevel      = level;
+    _data.savedDifficultyTimer = diffTimer;
+    save();
+  }
+
+  function clearDeathState() {
+    if (!_data) load();
+    _data.savedDeathLevel      = 0;
+    _data.savedDifficultyTimer = 0;
+    save();
+  }
+
+  function getDeathState() {
+    if (!_data) load();
+    return {
+      level:    _data.savedDeathLevel      || 0,
+      diffTimer: _data.savedDifficultyTimer || 0,
+    };
+  }
+
   function reset() {
     _data = structuredClone(DEFAULTS);
     save();
@@ -161,6 +186,6 @@ const Storage = (() => {
 
   load();
 
-  return { load, save, get, set, submitRun, spend, getData, unlockAchievement, reset };
+  return { load, save, get, set, submitRun, spend, getData, unlockAchievement, reset, saveDeathState, clearDeathState, getDeathState };
 
 })();

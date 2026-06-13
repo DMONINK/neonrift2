@@ -122,6 +122,27 @@ html, body {
 .btn-secondary:hover  { background: rgba(0,245,255,0.1); box-shadow: 0 0 14px rgba(0,245,255,0.3); }
 .btn-secondary:active { background: rgba(0,245,255,0.2); }
 
+.btn-continue {
+  font-family: var(--font-display);
+  border: none;
+  cursor: pointer;
+  border-radius: 6px;
+  letter-spacing: 0.08em;
+  transition: all 0.15s ease;
+  display: block;
+  width: 100%;
+  padding: 14px 0;
+  margin: 8px 0;
+  background: linear-gradient(90deg, #ffd700 0%, #ff6600 100%);
+  color: #000;
+  font-size: 1rem;
+  font-weight: 700;
+  box-shadow: 0 0 18px rgba(255,215,0,0.45);
+  text-transform: uppercase;
+}
+.btn-continue:hover  { filter: brightness(1.18); transform: translateY(-2px); box-shadow: 0 0 30px rgba(255,215,0,0.7); }
+.btn-continue:active { transform: translateY(0); filter: brightness(0.9); }
+
 .btn-pause {
   background: var(--bg-panel);
   border: 1px solid var(--glass-border);

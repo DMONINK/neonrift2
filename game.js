@@ -1,5 +1,5 @@
 /* =====================================================
-   NEON RIFT: SKY RUNNER — game.js  v2.2
+   NEON RIFT: SKY RUNNER — game.js  v2.5
    Main game engine: rendering, physics, entities, systems
    NEW: 5 difficulty levels, boss enemy, 8 enemy types,
         new obstacles, shields, achievements, screen effects,
@@ -37,12 +37,13 @@ const Game = (() => {
   let score, energy, distance, comboCount, comboTimer, maxCombo;
   let gameSpeed, difficultyTimer, spawnTimer, powerupTimer, enemySpawnTimer;
   let shakeTimer = 0, shakeMag = 0;
-  let slowmoActive = false, slowmoTimer = 0;
   let cameraZoom = 1, targetZoom = 1;
   let currentLevel = 1;
   let levelUpTimer = 0;  // display level-up banner
   let levelStartScore = 0; // score at start of current level (for relative boss threshold)
   let bossActive   = false;
+  let blockClearTimer = 0;
+  let _resumeLevel = 0, _resumeDifficultyTimer = 0;
   let bossSpawned  = false;
   let _preBossSnapshot = null;
   let enemiesDefeated = 0;
@@ -207,8 +208,7 @@ const Game = (() => {
 
   function _tryJump() {
     if (!running || paused || !player) return;
-    const slowmoFactor = slowmoActive ? 0.35 : 1;
-    const vel = JUMP_VEL * (1 + player.jumpBonus) * slowmoFactor;
+    const vel = JUMP_VEL * (1 + player.jumpBonus);
     if (player.onGround) {
       player.vy = vel;
       player.onGround = false;
@@ -285,7 +285,7 @@ const Game = (() => {
 
     // Gravity
     if (!p.onGround) {
-      const gMult = slowmoActive ? 0.35 : 1;
+      const gMult = 1;
       p.vy += GRAVITY * gMult * dt;
       p.y  += p.vy * dt;
     }
@@ -394,7 +394,7 @@ const Game = (() => {
     ctx.restore();
 
     // Parallax layers
-    const worldSpd = gameSpeed * (slowmoActive ? 0.35 : 1);
+    const worldSpd = gameSpeed;
     for (const layer of bgLayers) {
       const spd = layer.speed * worldSpd;
       layer.offset = (layer.offset + spd * dt) % (W * 2.2);
@@ -584,7 +584,7 @@ const Game = (() => {
   }
 
   function _updateObstacles(dt) {
-    const spd = gameSpeed * (slowmoActive ? 0.35 : 1);
+    const spd = gameSpeed;
     for (const o of obstacles) {
       o.x -= spd * dt;
       if (!o.passed && o.x + o.w < player.x - 5) {
@@ -707,11 +707,19 @@ const Game = (() => {
   };
 
   const BOSS_DEF = {
-    color:'#ff2d78', w:120, h:80, hp:20, speed:0.4,
-    icon:'👁', points:2000,
+    speed:0.4, points:2000,
   };
   // HP required per level (dash hits to kill)
   const BOSS_HP_PER_LEVEL = [0, 5, 8, 11, 14, 17];
+  // Unique appearance per level (color, size, icon)
+  const BOSS_PER_LEVEL = [
+    null, // index 0 unused
+    { color:'#ff2d78', w:120, h:80,  icon:'👁'  }, // Level 1 — pink Watcher
+    { color:'#b44dff', w:132, h:88,  icon:'💀'  }, // Level 2 — purple Reaper
+    { color:'#00f5ff', w:144, h:96,  icon:'⚡'  }, // Level 3 — cyan Shocker
+    { color:'#ff6600', w:156, h:104, icon:'🔥'  }, // Level 4 — orange Inferno
+    { color:'#e8e8ff', w:168, h:112, icon:'☠'   }, // Level 5 — void Wraith
+  ];
 
   function _spawnEnemy() {
     if (bossActive) return;
@@ -775,24 +783,25 @@ const Game = (() => {
     Audio.play('bossWarning');
     Audio.setBossAmbient(true);
     shakeCamera(0.6, 15);
-    _flashScreen('#ff2d78', 0.35);
+    const bdef = BOSS_PER_LEVEL[currentLevel] || BOSS_PER_LEVEL[1];
+    _flashScreen(bdef.color, 0.35);
     UI.showBossBanner(currentLevel);
 
     const boss = {
       type:        'boss',
       x:           W + 40,
-      y:           GROUND_Y + PLAYER_H - BOSS_DEF.h,
-      w:           BOSS_DEF.w, h:BOSS_DEF.h,
-      color:       BOSS_DEF.color,
+      y:           GROUND_Y + PLAYER_H - bdef.h,
+      w:           bdef.w, h:bdef.h,
+      color:       bdef.color,
       behavior:    'boss',
-      hp:          BOSS_HP_PER_LEVEL[currentLevel] ?? BOSS_DEF.hp,
-      maxHp:       BOSS_HP_PER_LEVEL[currentLevel] ?? BOSS_DEF.hp,
+      hp:          BOSS_HP_PER_LEVEL[currentLevel] ?? 5,
+      maxHp:       BOSS_HP_PER_LEVEL[currentLevel] ?? 5,
       alive:       true,
       shootTimer:  0,
       floatPhase:  0,
       projectiles: [],
       passed:      false,
-      icon:        BOSS_DEF.icon,
+      icon:        bdef.icon,
       points:      BOSS_DEF.points * currentLevel,
       hitFlash:    0,
       phaseTimer:  0,
@@ -802,7 +811,7 @@ const Game = (() => {
   }
 
   function _updateEnemies(dt) {
-    const spd = gameSpeed * (slowmoActive ? 0.35 : 1);
+    const spd = gameSpeed;
     const diff = _difficulty();
 
     for (const e of enemies) {
@@ -947,11 +956,14 @@ const Game = (() => {
     score += BOSS_DEF.points * currentLevel;
     UI.spawnPopup('BOSS DEFEATED! +' + (BOSS_DEF.points * currentLevel), W * 0.5, H * 0.4, 'combo');
 
+    // Clear all blocks and pause obstacle spawning for 3s
+    obstacles = [];
+    blockClearTimer = 3;
+
     // Restore pre-boss game state
     if (_preBossSnapshot) {
       gameSpeed       = _preBossSnapshot.gameSpeed;
       activePowerups  = _preBossSnapshot.activePowerups;
-      slowmoActive    = activePowerups.some(p => p.type === 'slowmo');
       _preBossSnapshot = null;
     }
     spawnTimer      = 0;
@@ -1059,7 +1071,6 @@ const Game = (() => {
   const ENERGY_COLORS = ['#00f5ff', '#ffd700', '#39ff14', '#ff66ff'];
   const POWERUP_DEFS = [
     { type:'magnet',      icon:'🧲', color:'#ff66ff', label:'MAGNET',      duration:10, weight:18 },
-    { type:'slowmo',      icon:'⏳', color:'#88ffff', label:'SLOW-MO',     duration:6,  weight:12 },
     { type:'dashBoost',   icon:'💨', color:'#66ff99', label:'DASH BOOST',  duration:8,  weight:15 },
     { type:'invincible',  icon:'⚡', color:'#ffdd00', label:'INVINCIBLE',  duration:5,  weight:8  },
     { type:'doubleScore', icon:'✨', color:'#ff88ff', label:'2X SCORE',    duration:12, weight:14 },
@@ -1091,9 +1102,7 @@ const Game = (() => {
         value: val, alive: true, phase: Math.random() * Math.PI * 2,
       });
     } else {
-      const available = slowmoActive
-        ? POWERUP_DEFS.filter(d => d.type !== 'slowmo')
-        : POWERUP_DEFS;
+      const available = POWERUP_DEFS;
       const total = available.reduce((s, p) => s + p.weight, 0);
       let r = Math.random() * total, def = available[0];
       for (const d of available) { r -= d.weight; if (r <= 0) { def = d; break; } }
@@ -1107,7 +1116,7 @@ const Game = (() => {
   }
 
   function _updatePickups(dt) {
-    const spd = gameSpeed * (slowmoActive ? 0.35 : 1);
+    const spd = gameSpeed;
     const magnetActive = _hasPowerup('magnet');
     const magnetLevel  = _upgrades.magnetStrength || 0;
     const magnetRange  = magnetActive ? (155 + magnetLevel * 45) : 0;
@@ -1135,7 +1144,6 @@ const Game = (() => {
     activePowerups = activePowerups.filter(a => a.type !== def.type);
     activePowerups.push({ type: def.type, timer: def.duration, maxTime: def.duration, icon: def.icon, color: def.color });
 
-    if (def.type === 'slowmo')     { slowmoActive = true; Audio.play('slowmo'); }
     if (def.type === 'invincible') { player.invincible = true; player.invTimer = def.duration; }
     if (def.type === 'magnet')     Audio.play('magnetOn');
 
@@ -1147,12 +1155,10 @@ const Game = (() => {
     for (const pu of activePowerups) {
       pu.timer -= dt;
       if (pu.timer <= 0) {
-        if (pu.type === 'slowmo')    slowmoActive = false;
         if (pu.type === 'invincible') player.invincible = false;
       }
     }
     activePowerups = activePowerups.filter(pu => pu.timer > 0);
-    slowmoActive = _hasPowerup('slowmo');
   }
 
   function _hasPowerup(type) {
@@ -1285,9 +1291,15 @@ const Game = (() => {
 
       if (hit) {
         if (o.id === 'stormzone' && (player.dashing || player.dashEndGrace > 0)) {
-          // Dash destroys stormzone — it's an energy field, not a solid wall
+          // Dash destroys stormzone — it's an energy field, not a solid wall (always)
           o.alive = false;
           _spawnBurst(o.x + o.w * 0.5, o.y + o.h * 0.5, o.color, 14);
+          Audio.play('dash');
+        } else if (bossActive && player.dashing && o.id !== 'laser' && o.id !== 'dualbeam') {
+          // During boss fights, dash breaks solid blocks
+          o.alive = false;
+          _spawnBurst(o.x + o.w * 0.5, o.y + o.h * 0.5, o.color, 12);
+          shakeCamera(0.1, 3);
           Audio.play('dash');
         } else if (!inv) {
           _playerDie();
@@ -1329,6 +1341,10 @@ const Game = (() => {
     if (player.dead) return;
     player.dead = true;
     running = false;
+    // Save state so "Run Again" / "Continue" can resume from same level
+    _resumeLevel = currentLevel;
+    _resumeDifficultyTimer = difficultyTimer;
+    Storage.saveDeathState(currentLevel, difficultyTimer);
     Audio.play('die');
     shakeCamera(0.55, 12);
     _flashScreen('#ff2d78', 0.5);
@@ -1790,21 +1806,6 @@ const Game = (() => {
   // OVERLAYS
   // =====================================================
 
-  function _drawSlowmoOverlay() {
-    if (!slowmoActive) return;
-    ctx.save();
-    ctx.globalAlpha = 0.07;
-    ctx.fillStyle = '#88ffff';
-    ctx.fillRect(0, 0, W, H);
-    const vg = ctx.createRadialGradient(W/2, H/2, H*0.28, W/2, H/2, H*0.85);
-    vg.addColorStop(0, 'transparent');
-    vg.addColorStop(1, 'rgba(0,150,180,0.22)');
-    ctx.globalAlpha = 1;
-    ctx.fillStyle   = vg;
-    ctx.fillRect(0, 0, W, H);
-    ctx.restore();
-  }
-
   function _drawInvincibleOverlay() {
     if (!_hasPowerup('invincible')) return;
     const pulse = Math.sin(Date.now() * 0.012) * 0.5 + 0.5;
@@ -1836,12 +1837,17 @@ const Game = (() => {
     const diff = _difficulty();
 
     // Obstacle spawning
-    spawnTimer += dt;
-    const obsInterval = Math.max(0.65, 2.1 - diff * 1.45);
-    if (spawnTimer > obsInterval) {
-      spawnTimer = 0;
-      _spawnObstacle();
-      if (diff > 0.5 && Math.random() < 0.32) _spawnObstacle();
+    if (blockClearTimer > 0) {
+      blockClearTimer -= dt;
+      spawnTimer = 0; // prevent immediate spawn when timer expires
+    } else {
+      spawnTimer += dt;
+      const obsInterval = Math.max(0.65, 2.1 - diff * 1.45);
+      if (spawnTimer > obsInterval) {
+        spawnTimer = 0;
+        _spawnObstacle();
+        if (diff > 0.5 && Math.random() < 0.32) _spawnObstacle();
+      }
     }
 
     // Enemy spawning
@@ -1933,7 +1939,7 @@ const Game = (() => {
     lastTime  = timestamp;
 
     const realDt = rawDt;
-    const dt     = slowmoActive ? rawDt * 0.35 : rawDt;
+    const dt     = rawDt;
 
     // Update — some systems use real time, some scaled
     _updateDifficulty(realDt);
@@ -1976,7 +1982,6 @@ const Game = (() => {
     if (cameraZoom !== 1) ctx.restore();
 
     // Screen-space effects (no camera transform)
-    _drawSlowmoOverlay();
     _drawInvincibleOverlay();
     _drawScreenFlash(rawDt);
     _drawLevelUpBanner(rawDt);
@@ -2020,6 +2025,12 @@ const Game = (() => {
     _resize();
     _initBackground();
 
+    // Restore level/difficulty from last death (if any), then clear the saved data
+    const startLevel    = _resumeLevel          || 1;
+    const startDiffTime = _resumeDifficultyTimer || 0;
+    _resumeLevel = 0;
+    _resumeDifficultyTimer = 0;
+
     // Reset all state
     score           = 0;
     energy          = 0;
@@ -2027,22 +2038,22 @@ const Game = (() => {
     comboCount      = 1;
     comboTimer      = 0;
     maxCombo        = 1;
-    gameSpeed       = BASE_SPEED;
-    difficultyTimer = 0;
+    difficultyTimer = startDiffTime;
+    gameSpeed       = Math.min(MAX_SPEED, BASE_SPEED + Math.min(1, startDiffTime / 150 + (startLevel - 1) * 0.14) * (MAX_SPEED - BASE_SPEED));
     spawnTimer      = 0;
     powerupTimer    = 0;
     enemySpawnTimer = 0;
     dodgeCooldown   = 0;
     shakeTimer      = 0;
     shakeMag        = 0;
-    slowmoActive    = false;
     cameraZoom      = 1;
     targetZoom      = 1;
-    currentLevel    = 1;
+    currentLevel    = startLevel;
     levelUpTimer    = 0;
     levelStartScore = 0;
     bossActive      = false;
     bossSpawned     = false;
+    blockClearTimer = 0;
     enemiesDefeated = 0;
     screenFlash     = { active:false, color:'#fff', alpha:0 };
     activePowerups  = [];
@@ -2068,7 +2079,26 @@ const Game = (() => {
     Audio.setBossAmbient(false);
   }
 
-  function restart() { stop(); start(); }
+  function restart() { _resumeLevel = 0; _resumeDifficultyTimer = 0; stop(); start(); }
+
+  // Fresh run from level 1 — clears any saved death checkpoint
+  function startFresh() {
+    _resumeLevel = 0;
+    _resumeDifficultyTimer = 0;
+    Storage.clearDeathState();
+    stop();
+    start();
+  }
+
+  // Continue from the saved death checkpoint (persisted across tab closes)
+  function startSaved() {
+    const ds = Storage.getDeathState();
+    _resumeLevel = ds.level || 1;
+    _resumeDifficultyTimer = ds.diffTimer || 0;
+    Storage.clearDeathState();
+    stop();
+    start();
+  }
 
   function pause() {
     if (!running || paused) return;
@@ -2088,6 +2118,6 @@ const Game = (() => {
 
   function setDebugEnergy(amount) { energy = amount; }
 
-  return { start, stop, restart, pause, resume, setDebugEnergy };
+  return { start, stop, restart, startFresh, startSaved, pause, resume, setDebugEnergy };
 
 })();

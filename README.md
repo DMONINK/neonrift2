@@ -1,6 +1,34 @@
-# Neon Rift: Sky Runner — v2.2
+# Neon Rift: Sky Runner — v2.5
 
 An endless runner with elegant visuals, procedural audio, and deep upgrade systems.
+
+---
+
+## What's New in v2.5
+
+### ⚔️ Boss Overhaul
+- **Unique boss per level** — each of the 5 bosses has a distinct color, icon, and size:
+  | Level | Name | Color | Icon | Size |
+  |---|---|---|---|---|
+  | 1 | Watcher | Hot Pink | 👁 | 120×80 |
+  | 2 | Reaper | Purple | 💀 | 132×88 |
+  | 3 | Shocker | Cyan | ⚡ | 144×96 |
+  | 4 | Inferno | Orange | 🔥 | 156×104 |
+  | 5 | Wraith | Ghostly White | ☠ | 168×112 |
+- **Blocks breakable during boss fights** — dashing into any solid block destroys it while a boss is active; lasers/dual-beams remain lethal
+- **3-second block clear after defeating a boss** — all obstacles disappear and no new ones spawn for 3 seconds post-defeat
+
+### 🔄 Continue System
+- **Persistent death checkpoint** — when you die, your level and difficulty are saved to `localStorage`
+- **CONTINUE button** (gold) appears on the title screen after any run ends; shows the saved level (e.g. `▶ CONTINUE — LV 3`)
+- **RUN** always starts fresh from level 1 and clears the checkpoint
+- **CONTINUE** resumes from your exact death level at the same speed and difficulty — survives tab closes and browser restarts
+
+### 🔁 Run Again from Death Level
+- "Run Again" on the game-over screen drops you back into the level you died on at the correct difficulty — no more restarting from scratch mid-session
+
+### ❌ Removed
+- **Slow-Mo power-up** removed entirely — it was disruptive to the game feel and flow
 
 ---
 
