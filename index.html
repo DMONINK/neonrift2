@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Neon Rift: Sky Runner</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ===================================================
+       SCREENS
+       =================================================== -->
+
+  <!-- ── TITLE / MAIN MENU ── -->
+  <div id="screen-title" class="screen active">
+    <div class="title-bg-effects">
+      <canvas id="title-canvas"></canvas>
+    </div>
+    <div class="title-content">
+      <div class="title-logo">
+        <span class="logo-neon">NEON</span>
+        <span class="logo-rift">RIFT</span>
+        <div class="logo-sub">SKY RUNNER</div>
+      </div>
+
+      <!-- Stats strip -->
+      <div class="title-stats glass-panel">
+        <div class="stat-item">
+          <span class="stat-label">BEST SCORE</span>
+          <span class="stat-value" id="title-best-score">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">BEST COMBO</span>
+          <span class="stat-value" id="title-best-combo">0x</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">ENERGY ⚡</span>
+          <span class="stat-value neon-cyan" id="title-currency">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">RUNS</span>
+          <span class="stat-value" id="title-total-runs">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">HIGHEST</span>
+          <span class="stat-value neon-gold" id="title-highest-level">LV 1</span>
+        </div>
+      </div>
+
+      <div class="title-buttons">
+        <button class="btn-primary"    id="btn-play">▶ RUN</button>
+        <button class="btn-secondary"  id="btn-upgrade">⚡ UPGRADES</button>
+        <button class="btn-secondary"  id="btn-achievements">🏆 ACHIEVEMENTS</button>
+        <button class="btn-secondary"  id="btn-instructions">? HOW TO PLAY</button>
+      </div>
+      <div class="title-version">v2.0 — CYBERPUNK EDITION</div>
+    </div>
+  </div>
+
+  <!-- ── INSTRUCTIONS ── -->
+  <div id="screen-instructions" class="screen">
+    <div class="screen-inner glass-panel wide-panel">
+      <h2 class="panel-title">HOW TO PLAY</h2>
+      <div class="instructions-grid">
+
+        <div class="inst-section">
+          <h3>DESKTOP CONTROLS</h3>
+          <div class="key-list">
+            <div class="key-row"><kbd>A</kbd><kbd>D</kbd> / <kbd>◄</kbd><kbd>►</kbd><span>Move Left / Right</span></div>
+            <div class="key-row"><kbd>SPACE</kbd> / <kbd>W</kbd> / <kbd>▲</kbd><span>Jump — tap again for Double Jump</span></div>
+            <div class="key-row"><kbd>SHIFT</kbd> / <kbd>X</kbd><span>Dash — burst of speed (direction-aware)</span></div>
+            <div class="key-row"><kbd>S</kbd> / <kbd>▼</kbd><span>Dodge Slide — 0.4s invincibility</span></div>
+            <div class="key-row"><kbd>ESC</kbd><span>Pause / Resume</span></div>
+          </div>
+        </div>
+
+        <div class="inst-section">
+          <h3>MOBILE</h3>
+          <p>Use the <strong>joystick</strong> to move. Tap <strong>JUMP</strong> to jump — double-tap for a double jump in mid-air. <strong>DASH</strong> for a quick speed burst in the direction you're facing. <strong>DODGE</strong> slides under obstacles with a cooldown timer shown in the HUD.</p>
+        </div>
+
+        <div class="inst-section">
+          <h3>POWER-UPS</h3>
+          <div class="powerup-list">
+            <div class="pu-row"><span class="pu-icon">🧲</span><span><strong>Magnet</strong> — Pulls energy shards toward you</span></div>
+            <div class="pu-row"><span class="pu-icon">⏳</span><span><strong>Slow-Mo</strong> — Everything slows to 35% speed</span></div>
+            <div class="pu-row"><span class="pu-icon">💨</span><span><strong>Dash Boost</strong> — Longer, faster dash distance</span></div>
+            <div class="pu-row"><span class="pu-icon">⚡</span><span><strong>Invincibility</strong> — Full immunity; damages enemies on contact</span></div>
+            <div class="pu-row"><span class="pu-icon">✨</span><span><strong>2× Score</strong> — All points doubled</span></div>
+            <div class="pu-row"><span class="pu-icon">🛡</span><span><strong>Shield</strong> — Absorbs one hit, then breaks</span></div>
+            <div class="pu-row"><span class="pu-icon">🔥</span><span><strong>Rapid Fire</strong> — Instant-kill enemies on contact</span></div>
+          </div>
+        </div>
+
+        <div class="inst-section">
+          <h3>ENEMIES &amp; LEVELS</h3>
+          <p>8 enemy types grow in difficulty as you run. Every level has a <strong>Boss Guardian</strong> — deplete its HP bar to advance. Reach <strong>Level 5</strong> to face The Collapse. Build your combo by passing enemies and collecting shards — it decays over time! Spend earned energy in <strong>Upgrades</strong> to power up between runs.</p>
+        </div>
+
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem;">
+        <button class="btn-primary" id="btn-instructions-back">◄ BACK</button>
+        <button class="btn-secondary" id="btn-debug" style="opacity:0.3;font-size:0.7rem;letter-spacing:0.15em;width:auto;padding:8px 16px;">🔧 DEBUG</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── UPGRADE SHOP ── -->
+  <div id="screen-upgrade" class="screen">
+    <div class="screen-inner glass-panel wide-panel">
+      <h2 class="panel-title">UPGRADE SHOP</h2>
+      <div class="shop-currency glass-panel">
+        <span class="neon-cyan">⚡ ENERGY: <strong id="shop-currency">0</strong></span>
+      </div>
+      <div class="shop-tabs">
+        <button class="shop-tab active" data-tab="upgrades">UPGRADES</button>
+        <button class="shop-tab"        data-tab="skins">SKINS</button>
+        <button class="shop-tab"        data-tab="trails">TRAILS</button>
+      </div>
+      <div class="shop-content" id="shop-content">
+        <!-- dynamically filled by ui.js -->
+      </div>
+      <button class="btn-primary" id="btn-upgrade-back">◄ BACK</button>
+    </div>
+  </div>
+
+  <!-- ── ACHIEVEMENTS ── -->
+  <div id="screen-achievements" class="screen">
+    <div class="screen-inner glass-panel wide-panel tall-panel">
+      <h2 class="panel-title">ACHIEVEMENTS</h2>
+      <div id="achievements-content">
+        <!-- dynamically filled by ui.js -->
+      </div>
+      <button class="btn-primary" id="btn-achievements-back">◄ BACK</button>
+    </div>
+  </div>
+
+  <!-- ── GAME SCREEN ── -->
+  <div id="screen-game" class="screen">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud">
+      <!-- Top row: score | combo | stats -->
+      <div class="hud-top">
+
+        <!-- Left: Score + Best + Level -->
+        <div class="hud-left glass-panel hud-panel">
+          <div class="hud-score">
+            <span class="hud-label">SCORE</span>
+            <span class="hud-value" id="hud-score">0</span>
+          </div>
+          <div class="hud-score">
+            <span class="hud-label">BEST</span>
+            <span class="hud-value hud-best" id="hud-best">0</span>
+          </div>
+          <div class="hud-level-badge" id="hud-level">LV1</div>
+        </div>
+
+        <!-- Center: Combo -->
+        <div class="hud-center">
+          <div class="combo-container" id="combo-container">
+            <div class="combo-value" id="combo-value">1x</div>
+            <div class="combo-bar-wrap">
+              <div class="combo-bar" id="combo-bar"></div>
+            </div>
+            <div class="combo-label">COMBO</div>
+          </div>
+        </div>
+
+        <!-- Right: Dist + Energy + Dodge -->
+        <div class="hud-right glass-panel hud-panel">
+          <div class="hud-stat"><span class="hud-label">DIST</span><span class="hud-value" id="hud-dist">0m</span></div>
+          <div class="hud-stat"><span class="hud-label">⚡ ENERGY</span><span class="hud-value neon-cyan" id="hud-energy">0</span></div>
+          <div class="hud-stat"><span class="hud-label">DODGE</span><span class="hud-value dodge-ready" id="hud-dodge-status">READY</span></div>
+        </div>
+      </div>
+
+      <!-- Boss HP Bar (hidden until boss spawns) -->
+      <div id="hud-boss-bar">
+        <div class="boss-bar-label">⚠ BOSS GUARDIAN ⚠</div>
+        <div class="boss-bar-track">
+          <div id="hud-boss-hp-fill"></div>
+        </div>
+      </div>
+
+      <!-- Active Powerups -->
+      <div class="hud-powerups" id="hud-powerups"></div>
+    </div>
+
+    <!-- Pause Button -->
+    <button class="btn-pause" id="btn-pause">⏸</button>
+
+    <!-- Mobile Controls -->
+    <div id="mobile-controls">
+      <div id="joystick-zone">
+        <div id="joystick-base">
+          <div id="joystick-knob"></div>
+        </div>
+      </div>
+      <div id="action-buttons">
+        <button class="mobile-btn" id="mbtn-jump">JUMP</button>
+        <button class="mobile-btn" id="mbtn-dash">DASH</button>
+        <button class="mobile-btn" id="mbtn-slide">DODGE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAUSE SCREEN ── -->
+  <div id="screen-pause" class="screen">
+    <div class="screen-inner glass-panel">
+      <h2 class="panel-title">PAUSED</h2>
+      <div class="pause-stats">
+        <div class="stat-item">
+          <span class="stat-label">CURRENT SCORE</span>
+          <span class="stat-value" id="pause-score">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">COMBO</span>
+          <span class="stat-value" id="pause-combo">1x</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">LEVEL</span>
+          <span class="stat-value neon-cyan" id="pause-level">LEVEL 1</span>
+        </div>
+      </div>
+      <div class="pause-buttons">
+        <button class="btn-primary"   id="btn-resume">▶ RESUME</button>
+        <button class="btn-secondary" id="btn-pause-restart">↺ RESTART</button>
+        <button class="btn-secondary" id="btn-pause-menu">⌂ MENU</button>
+      </div>
+      <div class="audio-controls glass-panel">
+        <span>🔊</span>
+        <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5" />
+        <button class="btn-mute" id="btn-mute">MUTE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── GAME OVER ── -->
+  <div id="screen-gameover" class="screen">
+    <div class="screen-inner glass-panel wide-panel">
+      <h2 class="panel-title gameover-title">RIFT COLLAPSE</h2>
+      <div class="go-stats">
+        <div class="go-stat-row">
+          <div class="go-stat">
+            <span class="go-label">SCORE</span>
+            <span class="go-value" id="go-score">0</span>
+          </div>
+          <div class="go-stat">
+            <span class="go-label">BEST</span>
+            <span class="go-value neon-gold" id="go-best">0</span>
+          </div>
+          <div class="go-stat new-best-badge" id="go-newbest" style="display:none;">
+            <span class="new-best-text">★ NEW BEST!</span>
+          </div>
+        </div>
+        <div class="go-stat-row">
+          <div class="go-stat">
+            <span class="go-label">DISTANCE</span>
+            <span class="go-value" id="go-dist">0m</span>
+          </div>
+          <div class="go-stat">
+            <span class="go-label">MAX COMBO</span>
+            <span class="go-value neon-pink" id="go-combo">0x</span>
+          </div>
+        </div>
+        <div class="go-stat-row">
+          <div class="go-stat">
+            <span class="go-label">ENERGY EARNED</span>
+            <span class="go-value neon-cyan" id="go-energy">0</span>
+          </div>
+          <div class="go-stat">
+            <span class="go-label">LEVEL REACHED</span>
+            <span class="go-value neon-gold" id="go-level">LV1</span>
+          </div>
+          <div class="go-stat">
+            <span class="go-label">ENEMIES DEFEATED</span>
+            <span class="go-value" id="go-enemies">0</span>
+          </div>
+        </div>
+      </div>
+      <div class="go-buttons">
+        <button class="btn-primary"   id="btn-go-restart">↺ RUN AGAIN</button>
+        <button class="btn-secondary" id="btn-go-upgrade">⚡ UPGRADES</button>
+        <button class="btn-secondary" id="btn-go-menu">⌂ MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FLOATING POPUPS / TOASTS ── -->
+  <div id="float-popups"></div>
+
+  <!-- ── SCRIPTS (order matters) ── -->
+  <script src="storage.js"></script>
+  <script src="audio.js"></script>
+  <script src="ui.js"></script>
+  <script src="game.js"></script>
+
+</body>
+</html>
