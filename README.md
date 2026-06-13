@@ -1,4 +1,4 @@
-# Neon Rift: Sky Runner — v2.0
+# Neon Rift: Sky Runner — v2.1
 
 A cyberpunk endless runner with neon visuals, procedural audio, and deep upgrade systems.
 
@@ -53,8 +53,7 @@ Each level raises difficulty, speeds, and enemy spawn rates. A **Boss Guardian**
 - **Spiker**: Barrier with spike tips on top requiring tighter timing
 - **Gap Wall**: Full-width wall with a jump-through gap (random position)
 
-### ⚡ New Power-ups (2 added, 7 total)
-- **Shield** 🛡 — Absorbs one hit, then breaks with a burst effect
+### ⚡ New Power-ups (1 added, 6 total)
 - **Rapid Fire** 🔥 — Instant-kill any enemy you touch for 6 seconds
 
 ### 🧪 New Upgrades (3 added, 6 total)
