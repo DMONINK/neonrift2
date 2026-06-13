@@ -1,6 +1,6 @@
 # Neon Rift: Sky Runner — v2.1
 
-An endless runner with neon visuals, procedural audio, and deep upgrade systems.
+An endless runner with Elegant visuals, procedural audio, and deep upgrade systems.
 
 ---
 
