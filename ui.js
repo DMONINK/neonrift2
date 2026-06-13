@@ -1,5 +1,5 @@
 /* =====================================================
-   NEON RIFT: SKY RUNNER — ui.js  v2.0
+   NEON RIFT: SKY RUNNER — ui.js  v2.1
    Screen transitions, shop rendering, HUD, popups,
    boss HP bar, level indicator, achievement toasts
    ===================================================== */
