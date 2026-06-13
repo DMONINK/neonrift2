@@ -1,5 +1,5 @@
 /* =====================================================
-   NEON RIFT: SKY RUNNER — audio.js  v2.0
+   NEON RIFT: SKY RUNNER — audio.js  v2.1
    Procedural Web Audio API sound engine
    ===================================================== */
 
