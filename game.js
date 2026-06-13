@@ -1,5 +1,5 @@
 /* =====================================================
-   NEON RIFT: SKY RUNNER — game.js  v2.1
+   NEON RIFT: SKY RUNNER — game.js  v2.2
    Main game engine: rendering, physics, entities, systems
    NEW: 5 difficulty levels, boss enemy, 8 enemy types,
         new obstacles, shields, achievements, screen effects,
@@ -21,7 +21,9 @@ const Game = (() => {
   const COMBO_DECAY_TIME= 3.0;
   const MAX_LEVEL       = 5;
   const LEVEL_THRESHOLDS= [0, 2500, 8000, 18000, 35000]; // score per level
-  const BOSS_SCORE      = [7500, 17000, 34000, 60000, 100000]; // triggers boss
+  const BOSS_SCORE      = [7500, 17000, 34000, 60000, 100000]; // triggers boss (absolute)
+  // Score needed within each level before boss spawns (relative to level start)
+  const BOSS_SCORE_DELTA = [7500, 14000, 22000, 32000, 45000];
 
   // ---- State ----
   let canvas, ctx;
@@ -39,11 +41,11 @@ const Game = (() => {
   let cameraZoom = 1, targetZoom = 1;
   let currentLevel = 1;
   let levelUpTimer = 0;  // display level-up banner
+  let levelStartScore = 0; // score at start of current level (for relative boss threshold)
   let bossActive   = false;
   let bossSpawned  = false;
   let _preBossSnapshot = null;
   let enemiesDefeated = 0;
-  let _scoreForBossCheck = 0;
   let screenFlash = { active: false, color: '#fff', alpha: 0 };
   let shieldHits  = 0; // hits absorbed while invincible
 
@@ -173,6 +175,7 @@ const Game = (() => {
       dashTimer: 0,
       dashDir: 1,
       dashHitBoss: false,
+      dashEndGrace: 0,  // brief post-dash invincibility window
       knockbackVx: 0,
       knockbackTimer: 0,
       invincible: false,
@@ -271,7 +274,8 @@ const Game = (() => {
     }
 
     // Dash
-    if (p.dashing) { p.dashTimer -= dt; if (p.dashTimer <= 0) { p.dashing = false; p.dashHitBoss = false; } }
+    if (p.dashing) { p.dashTimer -= dt; if (p.dashTimer <= 0) { p.dashing = false; p.dashHitBoss = false; p.dashEndGrace = 0.1; } }
+    if (p.dashEndGrace > 0) p.dashEndGrace -= dt;
 
     // Slide
     if (p.sliding) { p.slideTimer -= dt; if (p.slideTimer <= 0) p.sliding = false; }
@@ -707,7 +711,7 @@ const Game = (() => {
     icon:'👁', points:2000,
   };
   // HP required per level (dash hits to kill)
-  const BOSS_HP_PER_LEVEL = [0, 9, 14, 19, 24, 30];
+  const BOSS_HP_PER_LEVEL = [0, 5, 8, 11, 14, 17];
 
   function _spawnEnemy() {
     if (bossActive) return;
@@ -908,13 +912,16 @@ const Game = (() => {
     // Phase 2 when HP < 50%
     if (boss.hp < boss.maxHp * 0.5) boss.phase = 2;
 
-    // Boss slow approach
-    if (boss.x > W * 0.6) {
+    // Boss slow approach — stops at 65% of screen width, leaving player room
+    const bossMinX = W * 0.55;
+    if (boss.x > W * 0.65) {
       boss.x -= spd * 0.22 * dt;
     } else {
       // Hover back and forth
       boss.x += Math.sin(boss.floatPhase * 0.4) * 1.5;
     }
+    // Hard floor so boss never pins the player against the left edge
+    if (boss.x < bossMinX) boss.x = bossMinX;
   }
 
   function _fireProjectile(e, vx, vy, pw = 14, ph = 6, color = null) {
@@ -1212,7 +1219,8 @@ const Game = (() => {
 
   function _checkCollisions() {
     if (player.dead) return;
-    const inv = player.invincible || _hasPowerup('invincible') || player.dashing || player.sliding;
+    const inv      = player.invincible || _hasPowerup('invincible') || player.sliding;
+    const invEnemy = inv || player.dashing || player.dashEndGrace > 0;
     const rapidFire = _hasPowerup('rapidFire');
 
     const ph = player.sliding ? PLAYER_H * 0.50 : PLAYER_H;
@@ -1275,8 +1283,15 @@ const Game = (() => {
         if (_boxOverlap(px, py, PLAYER_W, ph, o.x, o.y, o.w, o.h)) hit = true;
       }
 
-      if (hit && !inv) {
-        _playerDie();
+      if (hit) {
+        if (o.id === 'stormzone' && (player.dashing || player.dashEndGrace > 0)) {
+          // Dash destroys stormzone — it's an energy field, not a solid wall
+          o.alive = false;
+          _spawnBurst(o.x + o.w * 0.5, o.y + o.h * 0.5, o.color, 14);
+          Audio.play('dash');
+        } else if (!inv) {
+          _playerDie();
+        }
       }
     }
 
@@ -1284,14 +1299,13 @@ const Game = (() => {
     for (const e of enemies) {
       if (!e.alive) continue;
 
-      // Rapid fire kills enemies on contact
-      if (rapidFire && _boxOverlap(px, py, PLAYER_W, ph, e.x, e.y, e.w, e.h)) {
-        _damageEnemy(e, e.maxHp); // instant kill
-        continue;
+      // Rapid fire: +1 bonus damage when dashing — fall through so normal invEnemy hit also lands
+      if (rapidFire && player.dashing && _boxOverlap(px, py, PLAYER_W, ph, e.x, e.y, e.w, e.h)) {
+        _damageEnemy(e, 1); // +1 bonus on top of the normal dash hit below
       }
 
       if (_boxOverlap(px, py, PLAYER_W, ph, e.x, e.y, e.w, e.h)) {
-        if (inv) {
+        if (invEnemy) {
           // Invincible player damages enemy on contact
           _damageEnemy(e, 1);
         } else {
@@ -1304,7 +1318,7 @@ const Game = (() => {
         if (!pr.alive) continue;
         if (_boxOverlap(px, py, PLAYER_W, ph, pr.x, pr.y, pr.w, pr.h)) {
           pr.alive = false;
-          if (inv) { _spawnSparks(pr.x, pr.y, pr.color, 6); continue; }
+          if (invEnemy) { _spawnSparks(pr.x, pr.y, pr.color, 6); continue; }
           _playerDie();
         }
       }
@@ -1690,9 +1704,9 @@ const Game = (() => {
     if (currentLevel >= MAX_LEVEL) return;
     const nextThreshold = LEVEL_THRESHOLDS[currentLevel];
     if (score >= nextThreshold && !bossActive) {
-      // Before level-up, trigger boss
-      const bossThreshold = BOSS_SCORE[currentLevel - 1];
-      if (!bossSpawned && score >= bossThreshold) {
+      // Spawn boss once player has earned enough score *within* this level
+      const bossThreshold = BOSS_SCORE_DELTA[currentLevel - 1];
+      if (!bossSpawned && (score - levelStartScore) >= bossThreshold) {
         _spawnBoss();
       }
     }
@@ -1701,7 +1715,8 @@ const Game = (() => {
   function _triggerLevelUp() {
     if (currentLevel >= MAX_LEVEL) return;
     currentLevel++;
-    bossSpawned = false; // allow next boss
+    bossSpawned = false;    // allow next boss
+    levelStartScore = score; // reset relative boss threshold for new level
     levelUpTimer = 3.5;
     Audio.play('levelUp');
     shakeCamera(0.3, 8);
@@ -2025,6 +2040,7 @@ const Game = (() => {
     targetZoom      = 1;
     currentLevel    = 1;
     levelUpTimer    = 0;
+    levelStartScore = 0;
     bossActive      = false;
     bossSpawned     = false;
     enemiesDefeated = 0;

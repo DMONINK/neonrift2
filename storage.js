@@ -1,5 +1,5 @@
 /* =====================================================
-   NEON RIFT: SKY RUNNER — storage.js  v2.1
+   NEON RIFT: SKY RUNNER — storage.js  v2.2
    Handles all localStorage persistence
    ===================================================== */
 

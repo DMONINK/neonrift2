@@ -1,10 +1,20 @@
-# Neon Rift: Sky Runner — v2.1
+# Neon Rift: Sky Runner — v2.2
 
-An endless runner with Elegant visuals, procedural audio, and deep upgrade systems.
+An endless runner with elegant visuals, procedural audio, and deep upgrade systems.
 
 ---
 
-## What's New in v2.0
+## What's New in v2.2
+
+### 🐛 Bug Fixes
+- **Dash invincibility**: Dashing through blocks/obstacles now kills the player correctly — dash invincibility only applies to enemies and boss contact/projectiles
+- **Boss position**: Boss now stops at 65% screen width (was 60%) and is hard-clamped at 55% minimum, preventing it from pinning the player against the left edge
+- **Boss chain-spawning**: After defeating a boss, the next level's boss now requires the player to earn score *within that new level* before it spawns — defeating level 1 boss with a high score no longer triggers level 2, 3, etc. bosses in rapid succession
+- **Rapid Fire rework**: Rapid Fire no longer instant-kills enemies on contact; it now grants +1 extra damage hit when dashing (stacks with the normal dash hit — useful for high-HP enemies)
+
+---
+
+## What's New in v2.1
 
 ### 🐛 Bug Fixes
 - Fixed combo decay timer resetting incorrectly after dash
@@ -19,6 +29,10 @@ An endless runner with Elegant visuals, procedural audio, and deep upgrade syste
 - Fixed `AudioContext` not resuming after browser autoplay suspension
 - Fixed boss HP bar remaining visible after defeat
 
+---
+
+## What's New in v2.0
+
 ### ⚔️ New Enemies (4 added, 8 total)
 | Enemy | Behavior |
 |---|---|
@@ -31,13 +45,13 @@ An endless runner with Elegant visuals, procedural audio, and deep upgrade syste
 | **Void Crawler** | Wide, low-flying, hard to jump over |
 
 ### 🏟️ New Levels (5 total)
-| Level | Name | Boss Score Trigger |
+| Level | Name | Boss Score Trigger (within level) |
 |---|---|---|
 | 1 | Neon District | 7,500 |
-| 2 | Rift Zone | 17,000 |
-| 3 | Storm Sector | 34,000 |
-| 4 | Void Corridor | 60,000 |
-| 5 | The Collapse | 100,000 |
+| 2 | Rift Zone | 9,000 |
+| 3 | Storm Sector | 16,000 |
+| 4 | Void Corridor | 25,000 |
+| 5 | The Collapse | 40,000 |
 
 Each level raises difficulty, speeds, and enemy spawn rates. A **Boss Guardian** must be defeated to unlock the next level.
 
@@ -52,8 +66,9 @@ Each level raises difficulty, speeds, and enemy spawn rates. A **Boss Guardian**
 - **Spiker**: Barrier with spike tips on top requiring tighter timing
 - **Gap Wall**: Full-width wall with a jump-through gap (random position)
 
-### ⚡ New Power-ups (1 added, 6 total)
-- **Rapid Fire** 🔥 — Instant-kill any enemy you touch for 6 seconds
+### ⚡ Power-ups (6 total)
+- **Rapid Fire** 🔥 — Grants +1 bonus damage when dashing for 6 seconds (doubles dash hit power against shielded/multi-HP enemies)
+- Magnet, Slow-Mo, Dash Boost, Invincibility, 2× Score
 
 ### 🧪 New Upgrades (3 added, 6 total)
 - **Speed Boost** — +8% movement speed per level (3 levels)
@@ -117,7 +132,7 @@ For the best experience, use Chrome, Edge, or Firefox with hardware acceleration
 ## File Structure
 
 ```
-neon-rift-improved/
+neon-rift/
 ├── index.html   — All screens, HUD, mobile controls
 ├── style.css    — Visual design, animations, responsive layout
 ├── storage.js   — LocalStorage persistence, save migration
