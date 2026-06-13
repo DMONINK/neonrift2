@@ -1,5 +1,5 @@
 /* =====================================================
-   NEON RIFT: SKY RUNNER — game.js  v2.0
+   NEON RIFT: SKY RUNNER — game.js  v2.1
    Main game engine: rendering, physics, entities, systems
    NEW: 5 difficulty levels, boss enemy, 8 enemy types,
         new obstacles, shields, achievements, screen effects,
