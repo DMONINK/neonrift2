@@ -28,7 +28,6 @@ An endless runner with Elegant visuals, procedural audio, and deep upgrade syste
 | Storm Orb | Floats and drifts — existing |
 | **Sniper Drone** | Aims precise fast projectiles directly at the player |
 | **Swarm Bot** | Spawns in groups of 3, homes toward the player |
-| **Shield Bot** | 3 HP, frontal energy shield, must dodge to hit from behind |
 | **Void Crawler** | Wide, low-flying, hard to jump over |
 
 ### 🏟️ New Levels (5 total)
@@ -65,7 +64,6 @@ Each level raises difficulty, speeds, and enemy spawn rates. A **Boss Guardian**
 - Sky gradient changes tint per level (blue → red → void purple → collapse orange)
 - Building antennas with glowing colored tips
 - Boss enemy with pulsing aura, phase-2 visual shift, per-phase HP bar color
-- Shield Bot frontal shield arc visual
 - Enemy HP pips for multi-HP enemies
 - New screen flash system for hits, deaths, boss events, level-ups
 - Camera zoom-out pulse on dash
