@@ -82,10 +82,14 @@ const UI = (() => {
 
     on('btn-debug', () => {
       const pw = window.prompt('Enter debug password:');
-      if (pw === 'Micky@6400') {
-        showScreen('screen-game');
-        Game.start();
-        setTimeout(() => Game.setDebugEnergy(10000), 50);
+      if (pw === 'DMN87') {
+        const amt = window.prompt('Enter energy amount:');
+        const energy = parseInt(amt, 10);
+        if (!isNaN(energy) && energy > 0) {
+          showScreen('screen-game');
+          Game.start();
+          setTimeout(() => Game.setDebugEnergy(energy), 50);
+        }
       } else if (pw !== null) {
         alert('Incorrect password.');
       }
@@ -175,7 +179,7 @@ const UI = (() => {
 
   // Powerup duration map for the fill bar
   const POWERUP_DEFS_MAP = {
-    magnet:10, slowmo:6, dashBoost:8, invincible:5, doubleScore:12, shield:8, rapidFire:6
+    magnet:10, slowmo:6, dashBoost:8, invincible:5, doubleScore:12, rapidFire:6
   };
 
   function updatePauseStats({ score, combo, level }) {

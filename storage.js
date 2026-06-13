@@ -17,7 +17,6 @@ const Storage = (() => {
     highestLevel:  1,
     // Upgrades: level 0..3
     upgrades: {
-      shieldDuration: 0,
       magnetStrength: 0,
       energyGain:     0,
       comboRetain:    0,

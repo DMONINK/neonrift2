@@ -72,7 +72,7 @@
             <div class="key-row"><kbd>A</kbd><kbd>D</kbd> / <kbd>◄</kbd><kbd>►</kbd><span>Move Left / Right</span></div>
             <div class="key-row"><kbd>SPACE</kbd> / <kbd>W</kbd> / <kbd>▲</kbd><span>Jump — tap again for Double Jump</span></div>
             <div class="key-row"><kbd>SHIFT</kbd> / <kbd>X</kbd><span>Dash — burst of speed (direction-aware)</span></div>
-            <div class="key-row"><kbd>S</kbd> / <kbd>▼</kbd><span>Dodge Slide — 0.4s invincibility</span></div>
+            <div class="key-row"><kbd>S</kbd> / <kbd>▼</kbd><span>Dodge Slide — brief invincibility window</span></div>
             <div class="key-row"><kbd>ESC</kbd><span>Pause / Resume</span></div>
           </div>
         </div>
@@ -90,7 +90,6 @@
             <div class="pu-row"><span class="pu-icon">💨</span><span><strong>Dash Boost</strong> — Longer, faster dash distance</span></div>
             <div class="pu-row"><span class="pu-icon">⚡</span><span><strong>Invincibility</strong> — Full immunity; damages enemies on contact</span></div>
             <div class="pu-row"><span class="pu-icon">✨</span><span><strong>2× Score</strong> — All points doubled</span></div>
-            <div class="pu-row"><span class="pu-icon">🛡</span><span><strong>Shield</strong> — Absorbs one hit, then breaks</span></div>
             <div class="pu-row"><span class="pu-icon">🔥</span><span><strong>Rapid Fire</strong> — Instant-kill enemies on contact</span></div>
           </div>
         </div>
@@ -160,7 +159,7 @@
           <div class="hud-level-badge" id="hud-level">LV1</div>
         </div>
 
-        <!-- Center: Combo -->
+        <!-- Center: Combo + active powerups below -->
         <div class="hud-center">
           <div class="combo-container" id="combo-container">
             <div class="combo-value" id="combo-value">1x</div>
@@ -169,7 +168,11 @@
             </div>
             <div class="combo-label">COMBO</div>
           </div>
+          <div class="hud-powerups" id="hud-powerups"></div>
         </div>
+
+        <!-- Pause button between combo and right panel -->
+        <button class="btn-pause" id="btn-pause">⏸</button>
 
         <!-- Right: Dist + Energy + Dodge -->
         <div class="hud-right glass-panel hud-panel">
@@ -187,12 +190,7 @@
         </div>
       </div>
 
-      <!-- Active Powerups -->
-      <div class="hud-powerups" id="hud-powerups"></div>
     </div>
-
-    <!-- Pause Button -->
-    <button class="btn-pause" id="btn-pause">⏸</button>
 
     <!-- Mobile Controls -->
     <div id="mobile-controls">

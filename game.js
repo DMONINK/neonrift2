@@ -15,7 +15,7 @@ const Game = (() => {
   const GRAVITY         = 1900;
   const JUMP_VEL        = -700;
   const DASH_DUR        = 0.18;
-  const SLIDE_DUR       = 0.55;
+  const SLIDE_DUR       = 0.5;
   const PLAYER_W        = 36;
   const PLAYER_H        = 56;
   const COMBO_DECAY_TIME= 3.0;
@@ -41,6 +41,7 @@ const Game = (() => {
   let levelUpTimer = 0;  // display level-up banner
   let bossActive   = false;
   let bossSpawned  = false;
+  let _preBossSnapshot = null;
   let enemiesDefeated = 0;
   let _scoreForBossCheck = 0;
   let screenFlash = { active: false, color: '#fff', alpha: 0 };
@@ -171,6 +172,9 @@ const Game = (() => {
       dashing: false,
       dashTimer: 0,
       dashDir: 1,
+      dashHitBoss: false,
+      knockbackVx: 0,
+      knockbackTimer: 0,
       invincible: false,
       invTimer: 0,
       dead: false,
@@ -200,7 +204,8 @@ const Game = (() => {
 
   function _tryJump() {
     if (!running || paused || !player) return;
-    const vel = JUMP_VEL * (1 + player.jumpBonus);
+    const slowmoFactor = slowmoActive ? 0.35 : 1;
+    const vel = JUMP_VEL * (1 + player.jumpBonus) * slowmoFactor;
     if (player.onGround) {
       player.vy = vel;
       player.onGround = false;
@@ -220,7 +225,7 @@ const Game = (() => {
     const dashBonus  = _hasPowerup('dashBoost') ? 1.5 : 1;
     const cdBonus    = 1 - (_upgrades.dashCooldown || 0) * 0.15;
     player.dashing  = true;
-    player.dashTimer = DASH_DUR * dashBonus;
+    player.dashTimer = DASH_DUR * dashBonus * (bossActive ? 2 : 1);
     player.dashDir   = _heldLeft() ? -1 : 1;
     Audio.play('dash');
     _spawnBurst(player.x, player.y + PLAYER_H * 0.5, player.glowColor, 14);
@@ -259,8 +264,14 @@ const Game = (() => {
     const maxX = W * 0.94 - p.w / 2;
     p.x = Math.max(minX, Math.min(maxX, p.x));
 
+    // Knockback impulse (after boss dash hit)
+    if (p.knockbackTimer > 0) {
+      p.x += p.knockbackVx * dt;
+      p.knockbackTimer = Math.max(0, p.knockbackTimer - dt);
+    }
+
     // Dash
-    if (p.dashing) { p.dashTimer -= dt; if (p.dashTimer <= 0) p.dashing = false; }
+    if (p.dashing) { p.dashTimer -= dt; if (p.dashTimer <= 0) { p.dashing = false; p.dashHitBoss = false; } }
 
     // Slide
     if (p.sliding) { p.slideTimer -= dt; if (p.slideTimer <= 0) p.sliding = false; }
@@ -695,6 +706,8 @@ const Game = (() => {
     color:'#ff2d78', w:120, h:80, hp:20, speed:0.4,
     icon:'👁', points:2000,
   };
+  // HP required per level (dash hits to kill)
+  const BOSS_HP_PER_LEVEL = [0, 9, 14, 19, 24, 30];
 
   function _spawnEnemy() {
     if (bossActive) return;
@@ -749,6 +762,11 @@ const Game = (() => {
   function _spawnBoss() {
     if (bossSpawned) return;
     bossSpawned = true;
+    // Snapshot pre-boss state for restoration after defeat
+    _preBossSnapshot = {
+      gameSpeed,
+      activePowerups: activePowerups.slice(),
+    };
     bossActive  = true;
     Audio.play('bossWarning');
     Audio.setBossAmbient(true);
@@ -763,8 +781,8 @@ const Game = (() => {
       w:           BOSS_DEF.w, h:BOSS_DEF.h,
       color:       BOSS_DEF.color,
       behavior:    'boss',
-      hp:          BOSS_DEF.hp * currentLevel,
-      maxHp:       BOSS_DEF.hp * currentLevel,
+      hp:          BOSS_HP_PER_LEVEL[currentLevel] ?? BOSS_DEF.hp,
+      maxHp:       BOSS_HP_PER_LEVEL[currentLevel] ?? BOSS_DEF.hp,
       alive:       true,
       shootTimer:  0,
       floatPhase:  0,
@@ -890,19 +908,6 @@ const Game = (() => {
     // Phase 2 when HP < 50%
     if (boss.hp < boss.maxHp * 0.5) boss.phase = 2;
 
-    const shootInterval = boss.phase === 2 ? 0.7 : 1.2;
-    boss.shootTimer += dt;
-    if (boss.shootTimer > shootInterval) {
-      boss.shootTimer = 0;
-      // Spread shot
-      const angles = boss.phase === 2 ? [-0.35, -0.1, 0.1, 0.35] : [-0.2, 0.2];
-      for (const ang of angles) {
-        const spd2 = 320 + diff * 150;
-        _fireProjectile(boss, Math.cos(ang + Math.PI) * spd2, Math.sin(ang) * spd2, 12, 8, boss.color);
-      }
-      Audio.play('enemyShoot');
-    }
-
     // Boss slow approach
     if (boss.x > W * 0.6) {
       boss.x -= spd * 0.22 * dt;
@@ -934,6 +939,16 @@ const Game = (() => {
 
     score += BOSS_DEF.points * currentLevel;
     UI.spawnPopup('BOSS DEFEATED! +' + (BOSS_DEF.points * currentLevel), W * 0.5, H * 0.4, 'combo');
+
+    // Restore pre-boss game state
+    if (_preBossSnapshot) {
+      gameSpeed       = _preBossSnapshot.gameSpeed;
+      activePowerups  = _preBossSnapshot.activePowerups;
+      slowmoActive    = activePowerups.some(p => p.type === 'slowmo');
+      _preBossSnapshot = null;
+    }
+    spawnTimer      = 0;
+    enemySpawnTimer = 0;
 
     // Trigger level up after boss
     setTimeout(() => _triggerLevelUp(), 1200);
@@ -1041,11 +1056,24 @@ const Game = (() => {
     { type:'dashBoost',   icon:'💨', color:'#66ff99', label:'DASH BOOST',  duration:8,  weight:15 },
     { type:'invincible',  icon:'⚡', color:'#ffdd00', label:'INVINCIBLE',  duration:5,  weight:8  },
     { type:'doubleScore', icon:'✨', color:'#ff88ff', label:'2X SCORE',    duration:12, weight:14 },
-    { type:'shield',      icon:'🛡', color:'#88aaff', label:'SHIELD',      duration:8,  weight:10 }, // NEW
     { type:'rapidFire',   icon:'🔥', color:'#ff6600', label:'RAPID FIRE',  duration:6,  weight:8  }, // NEW: destroys enemies on contact
   ];
 
   function _spawnPickup() {
+    if (bossActive) {
+      // During boss fight: only spawn invincible / rapidFire powerups
+      const bossDefs = POWERUP_DEFS.filter(d => d.type === 'invincible' || d.type === 'rapidFire');
+      const total = bossDefs.reduce((s, p) => s + p.weight, 0);
+      let r = Math.random() * total, def = bossDefs[0];
+      for (const d of bossDefs) { r -= d.weight; if (r <= 0) { def = d; break; } }
+      pickups.push({
+        type: 'powerup', pType: def.type,
+        x: W + 20, y: GROUND_Y - 60 - Math.random() * 85,
+        r: 14, color: def.color, icon: def.icon, def,
+        alive: true, phase: Math.random() * Math.PI * 2,
+      });
+      return;
+    }
     if (Math.random() < 0.72) {
       // Energy shard
       const val = 1 + Math.floor(Math.random() * 3);
@@ -1056,9 +1084,12 @@ const Game = (() => {
         value: val, alive: true, phase: Math.random() * Math.PI * 2,
       });
     } else {
-      const total = POWERUP_DEFS.reduce((s, p) => s + p.weight, 0);
-      let r = Math.random() * total, def = POWERUP_DEFS[0];
-      for (const d of POWERUP_DEFS) { r -= d.weight; if (r <= 0) { def = d; break; } }
+      const available = slowmoActive
+        ? POWERUP_DEFS.filter(d => d.type !== 'slowmo')
+        : POWERUP_DEFS;
+      const total = available.reduce((s, p) => s + p.weight, 0);
+      let r = Math.random() * total, def = available[0];
+      for (const d of available) { r -= d.weight; if (r <= 0) { def = d; break; } }
       pickups.push({
         type: 'powerup', pType: def.type,
         x: W + 20, y: GROUND_Y - 60 - Math.random() * 85,
@@ -1181,8 +1212,7 @@ const Game = (() => {
 
   function _checkCollisions() {
     if (player.dead) return;
-    const inv = player.invincible || _hasPowerup('invincible');
-    const hasShield = _hasPowerup('shield');
+    const inv = player.invincible || _hasPowerup('invincible') || player.dashing || player.sliding;
     const rapidFire = _hasPowerup('rapidFire');
 
     const ph = player.sliding ? PLAYER_H * 0.50 : PLAYER_H;
@@ -1212,6 +1242,23 @@ const Game = (() => {
       }
     }
 
+    // Dash damages boss
+    if (bossActive && player.dashing && !player.dashHitBoss) {
+      const boss = enemies.find(e => e.type === 'boss' && e.alive);
+      if (boss && _boxOverlap(px, py, PLAYER_W, ph, boss.x, boss.y, boss.w, boss.h)) {
+        player.dashHitBoss    = true;
+        player.dashing        = false;
+        player.dashTimer      = 0;
+        player.knockbackVx    = -player.dashDir * 520;
+        player.knockbackTimer = 0.22;
+        player.vy             = -300;
+        _damageEnemy(boss, 1);
+        _spawnBurst(boss.x + boss.w * 0.5, boss.y + boss.h * 0.5, '#ff2d78', 12);
+        shakeCamera(0.2, 5);
+        Audio.play('dash');
+      }
+    }
+
     // Obstacles
     for (const o of obstacles) {
       if (!o.alive) continue;
@@ -1229,16 +1276,7 @@ const Game = (() => {
       }
 
       if (hit && !inv) {
-        if (hasShield) {
-          activePowerups = activePowerups.filter(p => p.type !== 'shield');
-          shieldHits++;
-          player.hurtFlash = 1;
-          Audio.play('shockwave');
-          _spawnBurst(player.x, player.y + PLAYER_H * 0.5, '#88aaff', 18);
-          shakeCamera(0.25, 6);
-        } else {
-          _playerDie();
-        }
+        _playerDie();
       }
     }
 
@@ -1256,12 +1294,6 @@ const Game = (() => {
         if (inv) {
           // Invincible player damages enemy on contact
           _damageEnemy(e, 1);
-        } else if (hasShield) {
-          activePowerups = activePowerups.filter(p => p.type !== 'shield');
-          player.hurtFlash = 1;
-          Audio.play('shockwave');
-          _spawnBurst(player.x, player.y + PLAYER_H * 0.5, '#88aaff', 16);
-          shakeCamera(0.22, 5);
         } else {
           _playerDie();
         }
@@ -1273,14 +1305,7 @@ const Game = (() => {
         if (_boxOverlap(px, py, PLAYER_W, ph, pr.x, pr.y, pr.w, pr.h)) {
           pr.alive = false;
           if (inv) { _spawnSparks(pr.x, pr.y, pr.color, 6); continue; }
-          if (hasShield) {
-            activePowerups = activePowerups.filter(p => p.type !== 'shield');
-            player.hurtFlash = 1;
-            Audio.play('shockwave');
-            shakeCamera(0.18, 4);
-          } else {
-            _playerDie();
-          }
+          _playerDie();
         }
       }
     }
@@ -1485,20 +1510,6 @@ const Game = (() => {
       ctx.shadowColor = p.glowColor;
     }
 
-    // Shield visual ring
-    if (_hasPowerup('shield')) {
-      ctx.save();
-      const shieldPulse = 0.5 + Math.sin(Date.now() * 0.008) * 0.35;
-      ctx.strokeStyle = '#88aaff';
-      ctx.shadowColor = '#88aaff';
-      ctx.shadowBlur  = 20;
-      ctx.lineWidth   = 2.5;
-      ctx.globalAlpha = shieldPulse;
-      ctx.beginPath();
-      ctx.ellipse(p.x, py + ph * 0.5, p.w * 0.8, ph * 0.6, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-    }
 
     // Body gradient
     const bodyGrad = ctx.createLinearGradient(px, py, px + p.w, py + ph);
@@ -1595,51 +1606,74 @@ const Game = (() => {
       }
     } else if (_activeTrail === 'comet') {
       const fadeDur = 0.9;
-      ctx.lineCap = 'round';
-      for (const yOff of [-11, 0, 11]) {
+      ctx.lineCap    = 'round';
+      ctx.shadowBlur  = 18;
+      ctx.shadowColor = '#ff6600';
+      ctx.strokeStyle = '#ff8800';
+      ctx.lineWidth   = 14;
+      for (const yOff of [-11, 11]) {
+        ctx.beginPath();
         for (let i = 1; i < pts.length; i++) {
           const ratio = Math.max(0, 1 - pts[i].t / fadeDur);
           if (ratio <= 0) continue;
           ctx.globalAlpha = ratio * 0.22;
-          ctx.strokeStyle = '#ff8800';
-          ctx.shadowBlur  = 28;
-          ctx.shadowColor = '#ff6600';
-          ctx.lineWidth   = 14 * ratio;
-          ctx.beginPath();
           ctx.moveTo(pts[i-1].x, pts[i-1].y + yOff);
           ctx.lineTo(pts[i].x, pts[i].y + yOff);
-          ctx.stroke();
         }
+        ctx.stroke();
+      }
+      ctx.shadowBlur  = 8;
+      ctx.shadowColor = '#ffd700';
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth   = 5;
+      for (const yOff of [-11, 11]) {
+        ctx.beginPath();
         for (let i = 1; i < pts.length; i++) {
           const ratio = Math.max(0, 1 - pts[i].t / fadeDur);
           if (ratio <= 0) continue;
           ctx.globalAlpha = ratio * 0.65;
-          ctx.strokeStyle = '#ffd700';
-          ctx.shadowBlur  = 12;
-          ctx.shadowColor = '#ffd700';
-          ctx.lineWidth   = 5 * ratio;
-          ctx.beginPath();
           ctx.moveTo(pts[i-1].x, pts[i-1].y + yOff);
           ctx.lineTo(pts[i].x, pts[i].y + yOff);
-          ctx.stroke();
         }
+        ctx.stroke();
       }
     } else if (_activeTrail === 'plasma') {
-      // NEW TRAIL: plasma ribbon
       const fadeDur = 0.7;
+      const hue     = (Date.now() * 0.18) % 360;
+      const hue2    = (hue + 120) % 360;
       ctx.lineCap = 'round';
-      for (let i = 1; i < pts.length; i++) {
-        const ratio = Math.max(0, 1 - pts[i].t / fadeDur);
-        if (ratio <= 0) continue;
-        const hue = (Date.now() * 0.5 + i * 8) % 360;
-        ctx.globalAlpha = ratio * 0.75;
-        ctx.strokeStyle = `hsl(${hue}, 100%, 60%)`;
-        ctx.shadowColor = `hsl(${hue}, 100%, 60%)`;
-        ctx.shadowBlur  = 12;
-        ctx.lineWidth   = 4 * ratio;
+      // Pass 1: wide glowing outer ribbon
+      ctx.shadowBlur = 14;
+      ctx.lineWidth  = 7;
+      for (const yOff of [-11, 0, 11]) {
+        const ribbonHue = (hue + (yOff + 11) * 20) % 360;
+        ctx.strokeStyle = `hsl(${ribbonHue}, 100%, 55%)`;
+        ctx.shadowColor = `hsl(${ribbonHue}, 100%, 55%)`;
         ctx.beginPath();
-        ctx.moveTo(pts[i-1].x, pts[i-1].y);
-        ctx.lineTo(pts[i].x, pts[i].y);
+        for (let i = 1; i < pts.length; i++) {
+          const ratio = Math.max(0, 1 - pts[i].t / fadeDur);
+          if (ratio <= 0) continue;
+          ctx.globalAlpha = ratio * 0.45;
+          ctx.moveTo(pts[i-1].x, pts[i-1].y + yOff);
+          ctx.lineTo(pts[i].x,   pts[i].y   + yOff);
+        }
+        ctx.stroke();
+      }
+      // Pass 2: thin bright core
+      ctx.shadowBlur = 6;
+      ctx.lineWidth  = 2;
+      for (const yOff of [-11, 0, 11]) {
+        const ribbonHue = (hue2 + (yOff + 11) * 20) % 360;
+        ctx.strokeStyle = `hsl(${ribbonHue}, 100%, 85%)`;
+        ctx.shadowColor = `hsl(${ribbonHue}, 100%, 85%)`;
+        ctx.beginPath();
+        for (let i = 1; i < pts.length; i++) {
+          const ratio = Math.max(0, 1 - pts[i].t / fadeDur);
+          if (ratio <= 0) continue;
+          ctx.globalAlpha = ratio * 0.9;
+          ctx.moveTo(pts[i-1].x, pts[i-1].y + yOff);
+          ctx.lineTo(pts[i].x,   pts[i].y   + yOff);
+        }
         ctx.stroke();
       }
     }

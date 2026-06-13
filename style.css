@@ -123,15 +123,17 @@ html, body {
 .btn-secondary:active { background: rgba(0,245,255,0.2); }
 
 .btn-pause {
-  position: absolute;
-  top: 12px; right: 16px;
   background: var(--bg-panel);
   border: 1px solid var(--glass-border);
   color: var(--text-main);
-  font-size: 1.3rem;
-  width: 44px; height: 44px;
+  font-size: 0.95rem;
+  width: 32px; height: 32px;
   border-radius: 50%;
   z-index: 100;
+  pointer-events: auto;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 2px;
 }
 .btn-pause:hover { border-color: var(--neon-cyan); color: var(--neon-cyan); }
 
@@ -419,23 +421,29 @@ kbd {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 10px 14px;
-  gap: 10px;
+  padding: 6px 10px;
+  gap: 6px;
+}
+.hud-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
 }
 
-.hud-panel   { padding: 8px 14px; min-width: 110px; }
+.hud-panel   { padding: 5px 10px; min-width: 85px; }
 .hud-score, .hud-stat {
   display: flex;
   flex-direction: column;
 }
 .hud-label {
-  font-size: 0.58rem;
-  letter-spacing: 0.15em;
+  font-size: 0.50rem;
+  letter-spacing: 0.12em;
   color: var(--text-dim);
 }
 .hud-value {
   font-family: var(--font-display);
-  font-size: 1.1rem;
+  font-size: 0.88rem;
   font-weight: 700;
   line-height: 1.1;
 }
@@ -460,8 +468,8 @@ kbd {
   background: var(--bg-panel);
   border: 1px solid var(--glass-border);
   border-radius: 8px;
-  padding: 6px 18px 8px;
-  min-width: 100px;
+  padding: 4px 12px 5px;
+  min-width: 72px;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .combo-container.combo-active {
@@ -470,7 +478,7 @@ kbd {
 }
 .combo-value {
   font-family: var(--font-display);
-  font-size: 1.4rem;
+  font-size: 1.05rem;
   font-weight: 900;
   color: var(--neon-pink);
   text-shadow: 0 0 10px var(--neon-pink);
@@ -529,20 +537,20 @@ kbd {
   transition: width 0.18s ease, background 0.5s ease;
 }
 
-/* Powerup HUD row */
+/* Powerup HUD row — sits below combo in the center column */
 .hud-powerups {
-  display: flex; gap: 8px;
-  padding: 0 14px 6px;
+  display: flex; gap: 4px;
+  padding: 0;
   justify-content: center;
   flex-wrap: wrap;
 }
 .powerup-hud-item {
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 4px;
   background: var(--bg-panel);
   border: 1px solid var(--glass-border);
-  border-radius: 20px;
-  padding: 4px 10px;
-  font-size: 1rem;
+  border-radius: 12px;
+  padding: 2px 7px;
+  font-size: 0.8rem;
 }
 .pu-bar-wrap {
   width: 40px; height: 4px;
